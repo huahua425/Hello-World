@@ -1,0 +1,62 @@
+# -*- coding: UTF-8 -*-
+"""
+name: 豆瓣电影
+method: get/re
+"""
+
+
+import requests
+import re
+from requests.exceptions import RequestException
+import json
+
+
+def get_one_page(url):
+    try:
+        res=requests.get(url)
+        if res.status_code==200:
+            return  res.text
+        return  None
+    except RequestException:
+        return  None
+
+
+def parse_one_html(html):
+    regex = '<em class="">(\d+)</em>.*?<span class="title">(.*?)</span>.*?<p class="">(.*?)</p>.*?<span class="rating_num" property="v:average">(.*?)</span>.*?<span>(.*?)</span>.*?<span class="inq">(.*?)</span>'
+    pattern = re.compile(regex, re.S)
+    items = re.findall(pattern, html)
+    # 对得到的list列表进行处理，将每条记录变成一个dict
+    for item in items:
+        content = ""
+        for every_list in item[2].split():
+            content = content + "".join(every_list)
+        content = re.sub(' ', ' ', content)
+        content = re.sub('<br>', '', content)
+        dict = {
+            "number": item[0],
+            "name": item[1],
+            "describe": content,
+            "star": item[3],
+            "evaluate": item[4],
+            "title": item[5]
+
+        }
+        with open('豆瓣.text', 'a', encoding='utf-8') as f:
+            f.write(json.dumps(dict, ensure_ascii=False) + '\n') #ensure_ascii 预防编码错误
+
+
+def main(start):
+    url = 'https://movie.douban.com/top250'
+    if start != 0:
+        url = 'https://movie.douban.com/top250?start=' + str(start) + '&filter='
+    html = get_one_page(url)
+    parse_one_html(html)
+
+
+if __name__ == '__main__':
+    for i in range(10):
+        main(i * 25)
+
+#结果输出
+#{"number": "1", "name": "肖申克的救赎", "describe": "导演:弗兰克·德拉邦特FrankDarabont&nbsp;&nbsp;&nbsp;主演:蒂姆·罗宾斯TimRobbins/...1994&nbsp;/&nbsp;美国&nbsp;/&nbsp;犯罪剧情", "star": "9.6", "evaluate": "1338863人评价", "title": "希望让人自由。"}
+#{"number": "2", "name": "霸王别姬", "describe": "导演:陈凯歌KaigeChen&nbsp;&nbsp;&nbsp;主演:张国荣LeslieCheung/张丰毅FengyiZha...1993&nbsp;/&nbsp;中国大陆香港&nbsp;/&nbsp;剧情爱情同性", "star": "9.6", "evaluate": "989216人评价", "title": "风华绝代。"}
